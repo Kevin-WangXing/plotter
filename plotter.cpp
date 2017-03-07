@@ -12,7 +12,19 @@ Plotter::Plotter(QWidget *parent)
     setAutoFillBackground(true);
     setPlotSettings(PlotSettings());
 
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    setFocusPolicy(Qt::StrongFocus);
     rubberBandIsShown = false;
+
+    zoomInButton = new QToolButton(this);
+    zoomInButton->setIcon(QIcon(":/images/zoomin.png"));
+    zoomInButton->adjustSize();
+    connect(zoomInButton, SIGNAL(clicked()), this, SLOT(zoomIn()));
+
+    zoomOutButton = new QToolButton(this);
+    zoomOutButton->setIcon(QIcon(":/images/zoomout.png"));
+    zoomOutButton->adjustSize();
+    connect(zoomOutButton, SIGNAL(clicked()), this, SLOT(zoomOut()));
 
     //resize(600, 500);
 }
@@ -39,6 +51,10 @@ void Plotter::setPlotSettings(const PlotSettings &settings)
     zoomStack.clear();
     zoomStack.append(settings);
     curZoom = 0;
+
+    //zoomInButton->setEnabled(false);
+    //zoomInButton->hide();
+    //zoomOutButton->hide();
 
     refreshPixmap();
 }
@@ -84,7 +100,8 @@ void Plotter::drawGrid(QPainter *painter)
                           QString::number(label));
     }
 
-    for (int j = 0; j <= settings.numYTicks; ++j) {
+    for (int j = 0; j <= settings.numYTicks; ++j)
+    {
         int y = rect.bottom() - (j * (rect.height() - 1)
                                    / settings.numYTicks);
         double label = settings.minY + (j * settings.spanY()
@@ -114,7 +131,8 @@ void Plotter::drawCurves(QPainter *painter)
     painter->setClipRect(rect.adjusted(+1, +1, -1, -1));//只画有效区域，超过区域不在绘画
 
     QMapIterator<int, QVector<QPointF> > i(curveMap);//将点取出放在迭代器里面
-    while (i.hasNext()) {
+    while (i.hasNext())
+    {
         i.next();
 
         int id = i.key();//容器里的值都是成对的，key第几条曲线
@@ -123,7 +141,7 @@ void Plotter::drawCurves(QPainter *painter)
 
                 //把每一个点都加进去
         for (int j = 0; j < data.count(); ++j)
-                {
+        {
             double dx = data[j].x() - settings.minX;//每一个点的i坐标减去最左边，就是要画出的位置
             double dy = data[j].y() - settings.minY;
             double x = rect.left() + (dx * (rect.width() - 1)
@@ -160,6 +178,11 @@ void Plotter::clearCurve(int id)
 //因为是屏外绘图，如果不加入该函数改变窗口大小，曲线不跟着动
 void Plotter::resizeEvent(QResizeEvent *event)
 {
+    //设置按钮位置
+    int x = width() - (zoomInButton->width()
+                       + zoomOutButton->width() + 10);
+    zoomInButton->move(x, 5);
+    zoomOutButton->move(x + zoomInButton->width() + 5, 5);
     refreshPixmap();
 }
 
@@ -240,6 +263,49 @@ void Plotter::mouseReleaseEvent(QMouseEvent *event)
         zoomIn();
     }
 }
+void Plotter::keyPressEvent(QKeyEvent *event)
+{
+    switch (event->key()) {
+    case Qt::Key_Plus:
+        zoomIn();
+        break;
+    case Qt::Key_Minus:
+        zoomOut();
+        break;
+    case Qt::Key_Left:
+        zoomStack[curZoom].scroll(-1, 0);
+        refreshPixmap();
+        break;
+    case Qt::Key_Right:
+        zoomStack[curZoom].scroll(+1, 0);
+        refreshPixmap();
+        break;
+    case Qt::Key_Down:
+        zoomStack[curZoom].scroll(0, -1);
+        refreshPixmap();
+        break;
+    case Qt::Key_Up:
+        zoomStack[curZoom].scroll(0, +1);
+        refreshPixmap();
+        break;
+    default:
+        QWidget::keyPressEvent(event);
+    }
+}
+void Plotter::wheelEvent(QWheelEvent *event)
+{
+    int numDegrees = event->delta() / 8;//
+    int numTicks = numDegrees / 15;//滚动的刻度
+
+    if (event->orientation() == Qt::Horizontal)
+        {
+        zoomStack[curZoom].scroll(numTicks, 0);
+    } else
+        {
+        zoomStack[curZoom].scroll(0, numTicks);
+    }
+    refreshPixmap();
+}
 
 void PlotSettings::adjust()
 {
@@ -270,12 +336,39 @@ void PlotSettings::adjustAxis(double &min, double &max, int &numTicks)
     max = std::ceil(max / step) * step;
 }
 
-void Plotter::zoomIn()//缩小
+void Plotter::zoomIn()//放大
 {
     if (curZoom < zoomStack.count() - 1) //容器里面有多少setting
     {
         ++curZoom;
+        zoomInButton->setEnabled(curZoom < zoomStack.count() - 1);
+        zoomOutButton->setEnabled(true);
+        zoomOutButton->show();
+        refreshPixmap();
 
     }
-    refreshPixmap();
+
+}
+
+void Plotter::zoomOut()
+{
+    if (curZoom > 0)
+    {
+        --curZoom;
+        zoomOutButton->setEnabled(curZoom > 0);
+        zoomInButton->setEnabled(true);
+        zoomInButton->show();
+        refreshPixmap();
+    }
+}
+
+void PlotSettings::scroll(int dx, int dy)
+{
+    double stepX = spanX() / numXTicks;
+    minX += dx * stepX;
+    maxX += dx * stepX;
+
+    double stepY = spanY() / numYTicks;
+    minY += dy * stepY;
+    maxY += dy * stepY;
 }

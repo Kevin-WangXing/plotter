@@ -5,6 +5,7 @@
 #include <QPixmap>
 #include <QMap>
 #include <QMouseEvent>
+#include <QToolButton>
 
 class PlotSettings;
 
@@ -23,8 +24,9 @@ public:
 
     QSize minimumSize() const;//设置最小窗口
     QSize sizeHint() const;//设置最合理窗口布局
-
-    void zoomIn();//缩小
+private slots:
+    void zoomIn();//放大
+    void zoomOut();//缩小
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -33,6 +35,8 @@ protected:
     void mousePressEvent(QMouseEvent *);
     void mouseMoveEvent(QMouseEvent *);
     void mouseReleaseEvent(QMouseEvent *event);
+    void wheelEvent(QWheelEvent *event);
+    void keyPressEvent(QKeyEvent *event);
 
 private:
     void updateRubberBandRegion();
@@ -42,6 +46,8 @@ private:
 
      enum { Margin = 50 };//B边框
 
+     QToolButton *zoomInButton;
+     QToolButton *zoomOutButton;
 
     QVector<PlotSettings> zoomStack;
     int curZoom;
@@ -58,6 +64,7 @@ class PlotSettings
 public:
     PlotSettings();
 
+    void scroll(int dx, int dy);
     void adjust();
 
     double spanX() const { return maxX - minX; }//左右跨度

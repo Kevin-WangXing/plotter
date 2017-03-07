@@ -14,3 +14,6 @@ SOURCES += main.cpp\
         plotter.cpp
 
 HEADERS  += plotter.h
+
+RESOURCES += \
+    plotter.qrc
