@@ -2,6 +2,7 @@
 
 #include <QPen>
 #include <QPainter>
+#include <cmath>
 
 Plotter::Plotter(QWidget *parent)
     : QWidget(parent)
@@ -204,9 +205,77 @@ void Plotter::mouseMoveEvent(QMouseEvent *event)
 void Plotter::updateRubberBandRegion()
 {
     QRect rect = rubberBandRect.normalized();//坐标标准化，左上角小，右下角大
-        //只刷新矩形区域
+    //只刷新矩形区域
     update(rect.left(), rect.top(), rect.width(), 1);//width横线
     update(rect.left(), rect.top(), 1, rect.height());//1高度height竖线
     update(rect.left(), rect.bottom(), rect.width(), 1);
     update(rect.right(), rect.top(), 1, rect.height());
+}
+//鼠标松开
+void Plotter::mouseReleaseEvent(QMouseEvent *event)
+{
+    //检查鼠标左键，是否显示橡皮筋（矩形框）
+    if ((event->button() == Qt::LeftButton) && rubberBandIsShown)
+    {
+        rubberBandIsShown = false;//松手即不画
+        updateRubberBandRegion();
+
+        QRect rect = rubberBandRect.normalized();
+        if (rect.width() < 4 || rect.height() < 4)//如果矩形太小，高，宽小于4像素不执行操作
+            return;
+        rect.translate(-Margin, -Margin);//鼠标平移，鼠标的原点和绘图的原点一致
+
+        PlotSettings prevSettings = zoomStack[curZoom];
+        PlotSettings settings;
+        double dx = prevSettings.spanX() / (width() - 2 * Margin);//每一个像素对应的刻度
+        double dy = prevSettings.spanY() / (height() - 2 * Margin);
+        settings.minX = prevSettings.minX + dx * rect.left();//当前坐标系最小最大值
+        settings.maxX = prevSettings.minX + dx * rect.right();
+        settings.minY = prevSettings.maxY - dy * rect.bottom();
+        settings.maxY = prevSettings.maxY - dy * rect.top();
+        settings.adjust();
+
+        zoomStack.resize(curZoom + 1);//向量要保存起来，可以持续放大
+        zoomStack.append(settings);
+        zoomIn();
+    }
+}
+
+void PlotSettings::adjust()
+{
+    adjustAxis(minX, maxX, numXTicks);//X轴调用一次
+    adjustAxis(minY, maxY, numYTicks);//Y轴调用一次
+}
+
+void PlotSettings::adjustAxis(double &min, double &max, int &numTicks)
+{
+    const int MinTicks = 4;//设置最小刻度线
+    double grossStep = (max - min) / MinTicks;//最大步长
+    //最大步长236 log236 = 2.37291，取结果2， 10的二次方 100， 然后在计算倍数200,500
+    double step = std::pow(10.0, std::floor(std::log10(grossStep)));
+
+    if (5 * step < grossStep) //如果5倍小于取5
+    {
+        step *= 5;
+    } else if (2 * step < grossStep)
+    {
+        step *= 2;
+    }
+
+    //刻度线
+    numTicks = int(std::ceil(max / step)/*上限*/ - std::floor(min / step)/*下限*/);
+    if (numTicks < MinTicks)
+        numTicks = MinTicks;
+    min = std::floor(min / step) * step;//新的最小值
+    max = std::ceil(max / step) * step;
+}
+
+void Plotter::zoomIn()//缩小
+{
+    if (curZoom < zoomStack.count() - 1) //容器里面有多少setting
+    {
+        ++curZoom;
+
+    }
+    refreshPixmap();
 }

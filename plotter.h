@@ -24,12 +24,15 @@ public:
     QSize minimumSize() const;//设置最小窗口
     QSize sizeHint() const;//设置最合理窗口布局
 
+    void zoomIn();//缩小
+
 protected:
     void paintEvent(QPaintEvent *event);
     void resizeEvent(QResizeEvent *event);
 
     void mousePressEvent(QMouseEvent *);
     void mouseMoveEvent(QMouseEvent *);
+    void mouseReleaseEvent(QMouseEvent *event);
 
 private:
     void updateRubberBandRegion();
@@ -55,6 +58,8 @@ class PlotSettings
 public:
     PlotSettings();
 
+    void adjust();
+
     double spanX() const { return maxX - minX; }//左右跨度
     double spanY() const { return maxY - minY; }//上下跨度
 
@@ -66,6 +71,9 @@ public:
 
     double minY;//Y轴最小最大
     double maxY;
+
+private:
+    static void adjustAxis(double &min, double &max, int &numTicks);
 };
 
 #endif // PLOTTER_H
