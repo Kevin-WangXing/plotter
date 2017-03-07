@@ -3,6 +3,7 @@
 
 #include <QtGui/QWidget>
 #include <QPixmap>
+#include <QMap>
 
 class PlotSettings;
 
@@ -15,6 +16,9 @@ public:
     ~Plotter();
 
     void setPlotSettings(const PlotSettings &settings);
+
+    void setCurveData(int id, const QVector<QPointF> &data);//…Ë÷√«˙œﬂ
+    void clearCurve(int id);
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -31,6 +35,7 @@ private:
     int curZoom;
 
     QPixmap pixmap;
+    QMap<int, QVector<QPointF> > curveMap;
 };
 
 class PlotSettings
