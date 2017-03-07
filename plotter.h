@@ -2,6 +2,7 @@
 #define PLOTTER_H
 
 #include <QtGui/QWidget>
+#include <QPixmap>
 
 class PlotSettings;
 
@@ -19,6 +20,7 @@ protected:
     void paintEvent(QPaintEvent *event);
 
 private:
+    void refreshPixmap();
     void drawGrid(QPainter *painter);
     void drawCurves(QPainter *painter);
 
@@ -27,6 +29,8 @@ private:
 
     QVector<PlotSettings> zoomStack;
     int curZoom;
+
+    QPixmap pixmap;
 };
 
 class PlotSettings

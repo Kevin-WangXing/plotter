@@ -35,12 +35,15 @@ void Plotter::setPlotSettings(const PlotSettings &settings)
     zoomStack.clear();
     zoomStack.append(settings);
     curZoom = 0;
+
+    refreshPixmap();
 }
 
 void Plotter::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
-    drawGrid(&painter);
+    //drawGrid(&painter);
+    painter.drawPixmap(0, 0, pixmap);
 }
 
 void Plotter::drawGrid(QPainter *painter)
@@ -86,4 +89,14 @@ void Plotter::drawGrid(QPainter *painter)
 
 void Plotter::drawCurves(QPainter *painter)
 {
+}
+
+void Plotter::refreshPixmap()
+{
+    pixmap = QPixmap(size());
+
+    QPainter painter(&pixmap);
+    painter.initFrom(this);
+    drawGrid(&painter);
+    update();
 }
