@@ -4,6 +4,7 @@
 #include <QtGui/QWidget>
 #include <QPixmap>
 #include <QMap>
+#include <QMouseEvent>
 
 class PlotSettings;
 
@@ -20,10 +21,18 @@ public:
     void setCurveData(int id, const QVector<QPointF> &data);//设置曲线
     void clearCurve(int id);
 
+    QSize minimumSize() const;//设置最小窗口
+    QSize sizeHint() const;//设置最合理窗口布局
+
 protected:
     void paintEvent(QPaintEvent *event);
+    void resizeEvent(QResizeEvent *event);
+
+    void mousePressEvent(QMouseEvent *);
+    void mouseMoveEvent(QMouseEvent *);
 
 private:
+    void updateRubberBandRegion();
     void refreshPixmap();
     void drawGrid(QPainter *painter);
     void drawCurves(QPainter *painter);
@@ -36,6 +45,9 @@ private:
 
     QPixmap pixmap;
     QMap<int, QVector<QPointF> > curveMap;
+
+    bool rubberBandIsShown;//是否显示矩形
+    QRect rubberBandRect;//矩形大小
 };
 
 class PlotSettings

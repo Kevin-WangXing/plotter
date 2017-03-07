@@ -6,11 +6,14 @@
 Plotter::Plotter(QWidget *parent)
     : QWidget(parent)
 {
+
     setBackgroundRole(QPalette::Dark);
     setAutoFillBackground(true);
     setPlotSettings(PlotSettings());
 
-    resize(600, 500);
+    rubberBandIsShown = false;
+
+    //resize(600, 500);
 }
 
 Plotter::~Plotter()
@@ -43,7 +46,15 @@ void Plotter::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
     //drawGrid(&painter);
+    //drawCurves(&painter);//屏内绘图，即使没有resizeEvent函数，改标窗口大小，绘图跟着变化
     painter.drawPixmap(0, 0, pixmap);
+
+    if(rubberBandIsShown)
+    {
+        painter.setPen(palette().light().color());//画笔
+        painter.drawRect(rubberBandRect.normalized()
+                         .adjusted(0, 0, -1, -1));//矩形
+    }
 }
 
 void Plotter::drawGrid(QPainter *painter)
@@ -144,4 +155,58 @@ void Plotter::setCurveData(int id, const QVector<QPointF> &data)
 void Plotter::clearCurve(int id)
 {
     curveMap.remove(id);
+}
+//因为是屏外绘图，如果不加入该函数改变窗口大小，曲线不跟着动
+void Plotter::resizeEvent(QResizeEvent *event)
+{
+    refreshPixmap();
+}
+
+QSize Plotter::minimumSize() const
+{
+    return QSize(6 * Margin, 4 * Margin);
+}
+
+QSize Plotter::sizeHint() const
+{
+    return QSize(12 * Margin, 8 * Margin);
+}
+
+void Plotter::mousePressEvent(QMouseEvent *event)
+{
+    //绘图区里面按下才起作用
+    QRect rect(Margin, Margin,
+               width() - 2 * Margin, height() - 2 * Margin);
+
+    if (event->button() == Qt::LeftButton) //鼠标左键点击
+    {
+        if (rect.contains(event->pos())) //鼠标按下的位置在绘图区里面
+        {
+            rubberBandIsShown = true;
+            rubberBandRect.setTopLeft(event->pos());
+            rubberBandRect.setBottomRight(event->pos());
+            updateRubberBandRegion();
+            //setCursor(Qt::CrossCursor);
+        }
+    }
+}
+
+void Plotter::mouseMoveEvent(QMouseEvent *event)
+{
+    if (rubberBandIsShown) //检查是不是要画
+    {
+        updateRubberBandRegion();
+        rubberBandRect.setBottomRight(event->pos());//改变右下角
+        updateRubberBandRegion();
+    }
+}
+
+void Plotter::updateRubberBandRegion()
+{
+    QRect rect = rubberBandRect.normalized();//坐标标准化，左上角小，右下角大
+        //只刷新矩形区域
+    update(rect.left(), rect.top(), rect.width(), 1);//width横线
+    update(rect.left(), rect.top(), 1, rect.height());//1高度height竖线
+    update(rect.left(), rect.bottom(), rect.width(), 1);
+    update(rect.right(), rect.top(), 1, rect.height());
 }
